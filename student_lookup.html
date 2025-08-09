@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Student Lookup by Admission Number</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #lookup { margin-top: 20px; }
+    #details { margin-top: 15px; padding: 10px; background: #f7f7f7; border-radius: 6px; min-height: 30px; font-size: 1.1em;}
+    label, input, button { font-size: 1em; }
+  </style>
+</head>
+<body>
+  <h2>Student Admission Details Lookup</h2>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" />
+  <div id="fileLoaded" style="color:green;display:none">Excel loaded!</div>
+
+  <div id="lookup" style="display:none">
+    <label for="admissionNo">Enter Admission Number:</label>
+    <input type="text" id="admissionNo" autocomplete="off" />
+    <button onclick="findStudent()">Find Student</button>
+  </div>
+
+  <div id="details"></div>
+
+  <script>
+    let studentData = [];
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        // Take first sheet
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        // Convert to array of objects using header row
+        studentData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+        if (studentData.length === 0) {
+          alert("Excel sheet is empty or not properly formatted.");
+          return;
+        }
+        document.getElementById('fileLoaded').style.display = "block";
+        document.getElementById('lookup').style.display = "block";
+        document.getElementById('details').innerHTML = '';
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function findStudent() {
+      const admNo = document.getElementById('admissionNo').value.trim();
+      if (!admNo) {
+        document.getElementById('details').innerHTML = "<span style='color:red'>Please enter an admission number.</span>";
+        return;
+      }
+      // Case-insensitive, match as string (handles numeric/text admission numbers)
+      const student = studentData.find(row =>
+        String(row["admission number"] || row["Admission Number"] || row["Admission number"] || row["Admission_No"] || row["admission_no"]).trim().toLowerCase()
+        === admNo.toLowerCase()
+      );
+      if (student) {
+        let cls = student["class"] || student["Class"];
+        let name = student["student name"] || student["Student Name"] || student["Name"];
+        let phone = student["phone number"] || student["Phone Number"] || student["Phone"];
+        document.getElementById('details').innerHTML =
+          `<b>Admission Number:</b> ${admNo} <br>
+           <b>Name:</b> ${name || "-"} <br>
+           <b>Class:</b> ${cls || "-"} <br>
+           <b>Phone Number:</b> ${phone || "-"}`;
+      } else {
+        document.getElementById('details').innerHTML = "<span style='color:orange'>No student found with this admission number.</span>";
+      }
+    }
+  </script>
+</body>
+</html>
